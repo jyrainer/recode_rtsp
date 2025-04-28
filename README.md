@@ -20,3 +20,18 @@
 git clone https://github.com/jyrainer/recode_rtsp.git
 cd recode_rtsp
 pip install -e .
+```
+---
+
+## 🔧 ffmpeg 설치방법 (Window)
+[링크](https://angelplayer.tistory.com/351) 참고하여 변수 등록
+```
+vim ~/.bashrc 들어가서
+export PATH=$PATH:"/c/Program Files/ffmpeg/bin"     처럼 추가
+```
+`ffmpeg -version` 로 제대로 동작하는지 확인
+
+---
+## 🛠 사용 방법
+*main.py* 스크립트 참고
+
