@@ -1,13 +1,17 @@
 import os
+import threading
 import time
 from datetime import datetime
+from queue import Queue
 
 import cv2
 
+from recode_rtsp.utils.capture_threading import frame_capture_thread
 from recode_rtsp.utils.trans_str import sanitize_folder_name
 
 
 def record_stream(stream_url, info, running_flag, max_duration):
+
     video_postfix = info["postfix"]
     cap = cv2.VideoCapture(stream_url)
     if not cap.isOpened():
@@ -31,13 +35,25 @@ def record_stream(stream_url, info, running_flag, max_duration):
     frame_count = 0
     segment_frame_count = 0
 
+    # Declare Queue
+    frame_queue = Queue(maxsize=300)
+    capture_running = threading.Event()
+    capture_running.set()
+
+    # Start capture thread
+    capture_thread = threading.Thread(
+        target=frame_capture_thread, args=(cap, frame_queue, capture_running)
+    )
+    capture_thread.start()
+
     try:
         print(f"[INFO] Starting recording for {stream_url}")
         while running_flag:
-            ret, frame = cap.read()
-            if not ret:
-                print(f"Failed to read frame from: {stream_url}")
-                break
+            try:
+                frame = frame_queue.get(timeout=1)  # 1초 이내 못 받으면 timeout
+            except:
+                print("[WARNING] Frame queue empty. Waiting for frames...")
+                continue
 
             frame_count += 1
             segment_frame_count += 1
@@ -46,12 +62,8 @@ def record_stream(stream_url, info, running_flag, max_duration):
             segment_elapsed_time = segment_frame_count / fps
 
             if max_duration is not None and elapsed_video_time >= max_duration:
-                print(
-                    f"[INFO] Max duration {max_duration} seconds reached based on frame count. Stopping recording."
-                )
+                print(f"[INFO] Max duration {max_duration} seconds reached. Stopping recording.")
                 break
-
-            current_time = time.time()
 
             if out is None or segment_elapsed_time >= info["recode_period"]:
                 if out is not None:
