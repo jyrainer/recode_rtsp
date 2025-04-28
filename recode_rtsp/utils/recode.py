@@ -26,23 +26,27 @@ def record_stream(stream_url, info, running_flag, max_duration):
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
     out = None
+    frame_count = 0
     total_start_time = time.time()
     segment_start_time = total_start_time 
 
     try:
-        print(f"[INFO]Starting recording for {stream_url}")
+        print(f"[INFO] Starting recording for {stream_url}")
         while running_flag:
             ret, frame = cap.read()
             if not ret:
                 print(f"Failed to read frame from: {stream_url}")
                 break
 
-            current_time = time.time()
+            frame_count += 1
 
+            elapsed_video_time = frame_count / fps
 
-            if max_duration is not None and (current_time - total_start_time) >= max_duration:
-                print(f"[INFO] Max duration {max_duration} seconds reached. Stopping recording.")
+            if max_duration is not None and elapsed_video_time >= max_duration:
+                print(f"[INFO] Max duration {max_duration} seconds reached based on frame count. Stopping recording.")
                 break
+
+            current_time = time.time()
 
             if out is None or (current_time - segment_start_time) >= info['recode_period']:
                 if out is not None:
