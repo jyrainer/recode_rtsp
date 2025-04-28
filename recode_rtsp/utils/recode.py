@@ -1,6 +1,5 @@
 import os
 import threading
-import time
 from datetime import datetime
 from queue import Queue
 
@@ -82,5 +81,7 @@ def record_stream(stream_url, info, running_flag, max_duration):
     finally:
         if out:
             out.release()
+        capture_running.clear()
+        capture_thread.join()
         cap.release()
         print(f"Recording stopped and saved for {stream_url}")
