@@ -1,0 +1,41 @@
+# Ignore OS generated files
+.DS_Store
+Thumbs.db
+
+# Ignore Python cache files
+__pycache__/
+*.py[cod]
+
+# Ignore virtual environment directories
+venv/
+env/
+
+# Ignore log files
+*.log
+
+# Ignore compiled files
+*.o
+*.so
+*.out
+*.a
+
+# Ignore IDE specific files
+.idea/
+.vscode/
+*.swp
+
+# Ignore Git specific files
+*.orig
+
+# Ignore build directories
+build/
+dist/
+*.egg-info/
+
+# Ignore RTSP specific temporary files
+*.mp4
+*.ts
+*.m3u8
+
+# Ignore videos
+*.mp4
