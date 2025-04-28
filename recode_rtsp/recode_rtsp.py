@@ -1,17 +1,29 @@
 import os
-import cv2
 import threading
 import time
-from datetime import datetime
+import subprocess
+
+from recode_rtsp.utils.file_io import save_yaml, load_yaml
+from recode_rtsp.utils.recode import record_stream
+from recode_rtsp.utils.manage_videos import merge_vidoes
 
 class RecodeRtsp:
-    def __init__(self, rtsp_stream, root_dir_saving, recode_period=300, postfix='mp4'):
+    """RecodeRtsp class for recording RTSP streams and managing video files."""
+
+    DEFAULT_INFO_DICT = {
+        'rtsp_streams': None,
+        'recode_period': None,
+        'postfix': None,
+        'root_dir_saving': None
+    }
+    YAML_FILE = 'info.yaml'
+
+    def __init__(self, root_dir_saving, rtsp_stream = None):
         if isinstance(rtsp_stream, str):
             rtsp_stream = [rtsp_stream]
         self.rtsp_streams = rtsp_stream
         self.root_dir_saving = root_dir_saving
-        self.recode_period = recode_period
-        self.postfix = postfix
+
         self.threads = []
         self.running = True
 
@@ -19,83 +31,55 @@ class RecodeRtsp:
             os.makedirs(self.root_dir_saving)
 
     @classmethod
-    def new(cls, rtsp_stream, root_dir_saving, recode_period=300, postfix='mp4'):
-        instance = cls(rtsp_stream, root_dir_saving, recode_period, postfix)
-        instance.start_recording()
+    def new(cls, root_dir_saving, rtsp_stream = None):
+        instance = cls(root_dir_saving, rtsp_stream)
         return instance
 
-    def start_recording(self):
+    @classmethod
+    def load(cls, root_dir_saving):
+        file_path = os.path.join(root_dir_saving, cls.YAML_FILE)
+        
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"File {file_path} does not exist.")
+
+        info = load_yaml(file_path)
+        instance = cls(
+            root_dir_saving=info.get('root_dir_saving', './assets'),
+        )
+
+        instance.rtsp_stream = info.get('rtsp_streams', [])
+        instance.recode_period = info.get('recode_period', 300)
+        instance.postfix = info.get('postfix', 'mp4')
+
+        return instance
+
+    def recode(self, rtsp_streams, recode_period=300, postfix='mp4', max_duration=None, merge = False):
+        self.rtsp_streams = rtsp_streams
+        self.recode_period = recode_period
+        self.postfix = postfix
+        self.max_duration = max_duration
+        
+        info = {
+            'rtsp_streams': self.rtsp_streams,
+            'recode_period': self.recode_period,
+            'postfix': self.postfix,
+            'root_dir_saving': self.root_dir_saving
+        }
+        info_path = os.path.join(self.root_dir_saving, 'info.yaml')
+        save_yaml(info, info_path)
+
         for stream in self.rtsp_streams:
-            t = threading.Thread(target=self.record_stream, args=(stream,))
+            t = threading.Thread(target=record_stream, args=(stream, info, self.running, max_duration))
             t.start()
             self.threads.append(t)
-
-    def record_stream(self, stream_url):
-        cap = cv2.VideoCapture(stream_url)
-        if not cap.isOpened():
-            print(f"Failed to open stream: {stream_url}")
-            return
-
-        folder_name = self.sanitize_folder_name(stream_url)
-        save_folder = os.path.join(self.root_dir_saving, folder_name)
-        os.makedirs(save_folder, exist_ok=True)
-
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-
-        fps = cap.get(cv2.CAP_PROP_FPS)
-        if fps == 0 or fps != fps:  # NaN check
-            fps = 25.0
-        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
-        out = None
-        start_time = time.time()
-
-        try:
-            while self.running:
-                ret, frame = cap.read()
-                if not ret:
-                    print(f"Failed to read frame from: {stream_url}")
-                    break
-
-                current_time = time.time()
-                if out is None or (current_time - start_time) >= self.recode_period:
-                    if out is not None:
-                        out.release()
-                    filename = datetime.now().strftime('%Y%m%d_%H%M%S') + f'.{self.postfix}'
-                    filepath = os.path.join(save_folder, filename)
-                    out = cv2.VideoWriter(filepath, fourcc, fps, (width, height))
-                    start_time = current_time
-
-                if out:
-                    out.write(frame)
-        except KeyboardInterrupt:
-            print("KeyboardInterrupt detected, saving file...")
-        finally:
-            if out:
-                out.release()
-            cap.release()
-            print(f"Recording stopped and saved for {stream_url}")
-
-    def sanitize_folder_name(self, stream_url):
-        return stream_url.replace(':', '_').replace('/', '_').replace('.', '_')
+        
+        if not self.running and merge:
+            self.merge()
 
     def stop(self):
         self.running = False
         for t in self.threads:
             t.join()
 
-# Example usage:
-if __name__ == "__main__":
-    rtsp_streams = [
-        'rtsp://172.168.47.35:8555/A_walljump',
-        'rtsp://172.168.47.35:8555/B_walljump',
-        'rtsp://172.168.47.35:8555/C_walljump'
-    ]
-    recorder = RecodeRtsp.new(rtsp_stream=rtsp_streams, root_dir_saving="./assets", recode_period=10, postfix='mp4')
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        print("Stopping all recordings...")
-        recorder.stop()
+    def merge(self):
+        merge_vidoes(self.root_dir_saving)
