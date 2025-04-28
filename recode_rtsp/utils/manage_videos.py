@@ -1,7 +1,7 @@
 import os
 import subprocess
 
-def merge_vidoes(root_dir_saving = None, output_file_name = 'merged_output.mp4'):
+def merge_videos(root_dir_saving = None, output_file_name = 'merged_output.mp4'):
     folders = [f for f in os.listdir(root_dir_saving) if os.path.isdir(os.path.join(root_dir_saving, f))]
     for folder in folders:
         folder_path = os.path.join(root_dir_saving, folder)

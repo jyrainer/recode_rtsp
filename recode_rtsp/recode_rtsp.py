@@ -5,7 +5,7 @@ import subprocess
 
 from recode_rtsp.utils.file_io import save_yaml, load_yaml
 from recode_rtsp.utils.recode import record_stream
-from recode_rtsp.utils.manage_videos import merge_vidoes
+from recode_rtsp.utils.manage_videos import merge_videos
 
 class RecodeRtsp:
     """RecodeRtsp class for recording RTSP streams and managing video files."""
@@ -90,5 +90,5 @@ class RecodeRtsp:
             t.join()
 
     def merge(self):
-        merge_vidoes(self.root_dir_saving)
+        merge_videos(self.root_dir_saving)
         print(f"[INFO] Merging completed.")
