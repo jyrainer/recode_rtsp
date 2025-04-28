@@ -30,6 +30,7 @@ def record_stream(stream_url, info, running_flag, max_duration):
     segment_start_time = total_start_time 
 
     try:
+        print(f"[INFO]Starting recording for {stream_url}")
         while running_flag:
             ret, frame = cap.read()
             if not ret:

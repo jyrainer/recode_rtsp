@@ -71,10 +71,18 @@ class RecodeRtsp:
         for stream in self.rtsp_streams:
             t = threading.Thread(target=record_stream, args=(stream, info, self.running, max_duration))
             t.start()
+            time.sleep(1)
             self.threads.append(t)
-        
+
+        while any(t.is_alive() for t in self.threads):
+            time.sleep(1)
+        self.running = False
+        print(f"[INFO] All threads have finished.")
+
         if not self.running and merge:
+            print(f"[INFO] Merging videos in {self.root_dir_saving}")
             self.merge()
+
 
     def stop(self):
         self.running = False
@@ -83,3 +91,4 @@ class RecodeRtsp:
 
     def merge(self):
         merge_vidoes(self.root_dir_saving)
+        print(f"[INFO] Merging completed.")
