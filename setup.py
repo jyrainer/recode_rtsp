@@ -7,6 +7,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         'opencv-python',
+        'pyyaml'
     ],
     python_requires='>=3.9',
     author='Jaeyong Park',
